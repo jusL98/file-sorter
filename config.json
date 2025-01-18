@@ -1,5 +1,6 @@
 {
-    "target_directory": "C:/Users/justi/Downloads/test",
+    "source_directory": "C:/Users/justi/Downloads/source_dir_test",
+    "target_directory": "C:/Users/justi/Downloads/source_dir_test/target_dir_test",
     "backup_wanted": true,
     "file_types_to_include": [],
     "file_types_to_exclude": [".mp4"]

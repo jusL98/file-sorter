@@ -1,9 +1,10 @@
 """
-This program will take a target directory and sort files within the directory by their creation date.
+This program will take a source directory and sort files within the directory by their creation date.
 New date directories are created if they do not already exist.
 Files are moved to their respective date directories.
 
 Settings can be modified including:
+- Source directory
 - Target directory
 - Backup: Enabled or Disabled
 - File types to include
@@ -23,11 +24,15 @@ def load_config():
 
 config = load_config()
 
+source_directory = config['source_directory']
 target_directory = config['target_directory']
-log_file = os.path.join(target_directory, "log.txt")
 backup_wanted = config['backup_wanted']
 file_types_to_include = config['file_types_to_include']
 file_types_to_exclude = config['file_types_to_exclude']
+
+
+log_file = os.path.join(target_directory, "log.txt")
+backup_directory = os.path.join(target_directory, "_BACKUP_")
 # --------------------------------------------
 
 # Handles logging and printing messages.
@@ -58,7 +63,7 @@ def log_message(message, level="info"):
 
 # Gets the sort method for each file either based on the file name of YYYYMMDD (first 8 digits), otherwise if not named like that, based on creation date.
 def get_sort_key(file):
-    file_path = os.path.join(target_directory, file) 
+    file_path = os.path.join(source_directory, file) 
 
     # Sorts by file name
     if len(file) >= 8 and file[:8].isdigit():
@@ -69,16 +74,16 @@ def get_sort_key(file):
         return datetime.fromtimestamp(os.path.getmtime(file_path))
 
 # Sorts and orders files and stores it in a dictionary. If the file is a directory or the log file, it will skip it.
-def sort_files_by_date(target_directory):
-    files = os.listdir(target_directory)
+def sort_files_by_date(source_directory):
+    files = os.listdir(source_directory)
     sorted_files = sorted(files, key=get_sort_key)
     grouped_files = {}
 
     for file in sorted_files:
-        file_path = os.path.join(target_directory, file)
+        file_path = os.path.join(source_directory, file)
         
-        # Skip directories and the log file
-        if os.path.isdir(file_path) or file_path == log_file:
+        # Skip directories and the log file.
+        if os.path.isdir(file_path) or file_path == log_file: #or file_path == os.path.join(source_directory, "log.txt"): <-- This is to also skip a log file if in the source directory.
             continue
 
         date_key = get_sort_key(file).date().strftime("%Y_%m_%d")
@@ -86,7 +91,7 @@ def sort_files_by_date(target_directory):
     return grouped_files
 
 # Moves files to their respective date folders and creates a backup of the files before moving them.
-def move_files(grouped_files, directory):
+def move_files(grouped_files, source_directory):
     total_files_found = sum(len(files) for files in grouped_files.values())
     total_files_moved = 0
 
@@ -108,12 +113,11 @@ def move_files(grouped_files, directory):
 
     # Creates a backup directory if backup is wanted.
     if backup_wanted:
-        backup_directory = os.path.join(directory, "_BACKUP_")
         os.makedirs(backup_directory, exist_ok=True)
 
     for date, files in grouped_files.items():
         # Creates a directory for each date.     
-        date_directory = os.path.join(directory, date)
+        date_directory = os.path.join(target_directory, date)
         if not os.path.exists(date_directory):
             os.makedirs(date_directory, exist_ok=True)
             log_message(f"New directory created: {date}")
@@ -121,7 +125,7 @@ def move_files(grouped_files, directory):
             log_message(f"Using existing directory: {date}")
 
         for file in files:
-            source_path = os.path.join(directory, file)
+            source_path = os.path.join(source_directory, file)
             destination_path = os.path.join(date_directory, file)
 
             # FILE SKIP 1 - Checks and handles if the file already exists in the destination directory.
@@ -153,6 +157,11 @@ def move_files(grouped_files, directory):
     return total_files_found, total_files_moved
 
 def main():
+    # Ensure the source directory exists
+    if not os.path.exists(source_directory):
+        print('ERROR: Source directory does not exist.')
+        return
+
     # Ensure the target directory exists
     if not os.path.exists(target_directory):
         print('ERROR: Target directory does not exist.')
@@ -163,6 +172,7 @@ def main():
     log_message("**************************************************\n", level="decorating")
 
     log_message("Settings:\n", level="decorating")
+    log_message(f"  - Source Directory: {source_directory}\n", level="decorating")
     log_message(f"  - Target Directory: {target_directory}\n", level="decorating")
     log_message(f"  - Backup: {'Enabled' if backup_wanted else 'Disabled'}\n", level="decorating")
     log_message(f"  - File Types To Include: {', '.join(file_types_to_include) if file_types_to_include else 'All'}\n", level="decorating")
@@ -172,8 +182,8 @@ def main():
 
     log_message("\n", level="decorating")
 
-    grouped_files = sort_files_by_date(target_directory)
-    move_files(grouped_files, target_directory)
+    grouped_files = sort_files_by_date(source_directory)
+    move_files(grouped_files, source_directory)
 
     log_message("\n==================================================\n", level="decorating")
 
