@@ -1,0 +1,6 @@
+{
+    "target_directory": "C:/Users/justi/Downloads/test",
+    "backup_wanted": true,
+    "file_types_to_include": [],
+    "file_types_to_exclude": [".mp4"]
+}
