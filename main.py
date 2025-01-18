@@ -10,7 +10,9 @@ import shutil
 # DIRECTORY, BACKUP FOLDER NAME, LOG FILE NAME, BACKUP OPTION
 directory = "C:/Users/justi/Downloads/test"
 log_file = os.path.join(directory, "log.txt")
-backup_wanted = False
+backup_wanted = True
+file_types_to_include = []  # Add file extensions to exclude (ex. ['.jpg', '.pdf']), empty list means all file types not excluded below are included.
+file_types_to_exclude = [".mp4", ".exe"]  # Add file extensions to exclude (ex. ['.exe', '.tmp']), empty list means no exclusions.
 # --------------------------------------------
 
 # Handles logging and printing messages.
@@ -24,7 +26,6 @@ def log_message(message, level="info"):
     }
     prefix = levels.get(level, "")
     full_message = f"{prefix}{message}"
-
 
     if level == "info":
         with open(log_file, "a") as log:
@@ -61,7 +62,7 @@ def sort_files_by_date(directory):
         # Skip directories and the log file
         if os.path.isdir(file_path) or file_path == log_file:
             continue
-        
+
         date_key = get_sort_key(file).date().strftime("%Y_%m_%d")
         grouped_files.setdefault(date_key, []).append(file) # Groups files by the same date key together, creates a new key under the date key if it doesn't exist.
     return grouped_files
@@ -75,8 +76,8 @@ def move_files(grouped_files, directory):
 
     # Checks if there are no files to move.
     if not total_files_found:
-        log_message("No files to move.")
-        log_message(f"TOTAL FILES MOVED: {total_files_moved}\n", level="decorating")
+        log_message("No files to move. Exiting.")
+        log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
         return total_files_found, total_files_moved
 
     # Creates a backup directory if backup is wanted.
@@ -101,39 +102,45 @@ def move_files(grouped_files, directory):
             if os.path.exists(destination_path):
                 log_message(f"File '{file}' already exists in '{date_directory.replace(os.sep, '/')}'. Skipping move. {'Backup not created.' if backup_wanted else ''}", level="warning")
                 continue
+            
+            # Check file extension against whitelist and blacklist.
+            file_extension = os.path.splitext(file)[1].lower()
+            if file_types_to_include and file_extension not in file_types_to_include:
+                log_message(f"File '{file}' excluded ({file_extension} not in include list). Skipping move. {'Backup not created.' if backup_wanted else ''}", level="warning")
+                continue
+            if file_extension in file_types_to_exclude:
+                log_message(f"File '{file}' excluded ({file_extension} in exclude list). Skipping move. {'Backup not created.' if backup_wanted else ''}", level="warning")
+                continue
 
             # Backups the file if backup is wanted and overwrites the previous backup file if it already exists.
             if backup_wanted:
                 shutil.copy2(source_path, os.path.join(backup_directory, file))
 
             # Moves the file to the date directory.
-            log_message(f"Moving file '{file}' to '{date_directory.replace(os.sep, '/')}'", level="moving")
+            log_message(f"Moving file '{file}' to '{date_directory.replace(os.sep, '/')}'. {'Backup created.' if backup_wanted else ''}", level="moving")
             shutil.move(source_path, destination_path)
             total_files_moved += 1
 
-    log_message(f"TOTAL FILES MOVED: {total_files_moved}\n", level="decorating")
+    log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
     return total_files_found, total_files_moved
 
 def main():
     log_message("**************************************************\n", level="decorating")
-    log_message(f"New Log - {datetime.now()}\n", level="decorating")
+    log_message(f"New Log Entry - {datetime.now()}\n", level="decorating")
     log_message("**************************************************\n", level="decorating")
 
     log_message("Settings:\n", level="decorating")
     log_message(f"  - Target Directory: {directory}\n", level="decorating")
     log_message(f"  - Backup: {'enabled' if backup_wanted else 'disabled'}\n", level="decorating")
-    log_message(f"  - File Types To Include: \n", level="decorating")
-    log_message(f"  - File Types To Exclude: \n", level="decorating")
+    log_message(f"  - File Types To Include: {', '.join(file_types_to_include) if file_types_to_include else 'All'}\n", level="decorating")
+    log_message(f"  - File Types To Exclude: {', '.join(file_types_to_exclude) if file_types_to_exclude else 'None'}\n", level="decorating")
 
     log_message("--------------------------------------------------\n", level="decorating")
 
     log_message("\n", level="decorating")
 
     grouped_files = sort_files_by_date(directory)
-    total_files_found, total_files_moved = move_files(grouped_files, directory)
-
-    if total_files_found != total_files_moved:
-        log_message("Some files were not moved.", level="warning")
+    move_files(grouped_files, directory)
 
     log_message("\n==================================================\n", level="decorating")
 
