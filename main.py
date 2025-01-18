@@ -2,80 +2,142 @@
 This program will sort files in a directory by their creation date and separate them by date.
 Directories are skipped
 """
+# Imports
 import os
 from datetime import datetime
 import shutil
 
+# DIRECTORY, BACKUP FOLDER NAME, LOG FILE NAME, BACKUP OPTION
 directory = "C:/Users/justi/Downloads/test"
-backup_directory = os.path.join(directory, "_BACKUP_")
 log_file = os.path.join(directory, "log.txt")
+backup_wanted = False
+# --------------------------------------------
 
-def log_action(message):
-    with open(log_file, "a") as log:
-        log.write(f"{datetime.now()}: {message}\n")
+# Handles logging and printing messages.
+def log_message(message, level="info"):
+    levels = {
+        "decorating": "",
+        "info": "",
+        "moving": "",
+        "warning": "Warning: ",
+        "error": "Error: "
+    }
+    prefix = levels.get(level, "")
+    full_message = f"{prefix}{message}"
 
+
+    if level == "info":
+        with open(log_file, "a") as log:
+            log.write(f"{datetime.now()}: {full_message}\n")
+    if level == "moving" or level == "warning" or level == "error":
+        with open(log_file, "a") as log:
+            log.write(f"{datetime.now()}:  --> {full_message}\n")
+    elif level == "decorating":
+        with open(log_file, "a") as log:
+            log.write(full_message)
+    print(full_message)
+
+# Gets the sort method for each file either based on the file name of YYYYMMDD (first 8 digits), otherwise if not named like that, based on creation date.
 def get_sort_key(file):
-    file_path = os.path.join(directory, file)
+    file_path = os.path.join(directory, file) 
+
+    # Sorts by file name
     if len(file) >= 8 and file[:8].isdigit():
         return datetime.strptime(file[:8], "%Y%m%d")
-    elif os.path.isdir(file_path):
-        return datetime.min
-    return datetime.fromtimestamp(os.path.getmtime(file_path))
+    
+    # Sorts by creation date
+    else:
+        return datetime.fromtimestamp(os.path.getmtime(file_path))
 
+# Sorts and orders files and stores it in a dictionary. If the file is a directory or the log file, it will skip it.
 def sort_files_by_date(directory):
     files = os.listdir(directory)
     sorted_files = sorted(files, key=get_sort_key)
-    files_by_date = {}
+    grouped_files = {}
 
     for file in sorted_files:
-        if os.path.isdir(os.path.join(directory, file)) or file == "log.txt":
-            continue  # Skip directories and the log file
+        file_path = os.path.join(directory, file)
+        
+        # Skip directories and the log file
+        if os.path.isdir(file_path) or file_path == log_file:
+            continue
+        
         date_key = get_sort_key(file).date().strftime("%Y_%m_%d")
-        files_by_date.setdefault(date_key, []).append(file)
+        grouped_files.setdefault(date_key, []).append(file) # Groups files by the same date key together, creates a new key under the date key if it doesn't exist.
+    return grouped_files
 
-    return files_by_date
+# Moves files to their respective date folders and creates a backup of the files before moving them.
+def move_files(grouped_files, directory):
+    total_files_found = sum(len(files) for files in grouped_files.values())
+    total_files_moved = 0
 
-def move_files(files_by_date, directory):
-    if not any(files_by_date.values()):
-        log_action("No files to move.")
-        print("No files to move.")
-        return
+    log_message(f"TOTAL FILES FOUND: {total_files_found}\n", level="decorating")
 
-    # Create backup directory and copy files before sorting only if they don't exist in the destination
-    os.makedirs(backup_directory, exist_ok=True)  # Ensure backup directory exists
-    for date, files in files_by_date.items():
+    # Checks if there are no files to move.
+    if not total_files_found:
+        log_message("No files to move.")
+        log_message(f"TOTAL FILES MOVED: {total_files_moved}\n", level="decorating")
+        return total_files_found, total_files_moved
+
+    # Creates a backup directory if backup is wanted.
+    if backup_wanted:
+        backup_directory = os.path.join(directory, "_BACKUP_")
+        os.makedirs(backup_directory, exist_ok=True)
+
+    for date, files in grouped_files.items():
+        # Creates a directory for each date.     
         date_directory = os.path.join(directory, date)
-        os.makedirs(date_directory, exist_ok=True)
+        if not os.path.exists(date_directory):
+            os.makedirs(date_directory, exist_ok=True)
+            log_message(f"New directory created: {date}")
+        else:
+            log_message(f"Using existing directory: {date}")
 
         for file in files:
+            source_path = os.path.join(directory, file)
             destination_path = os.path.join(date_directory, file)
+
+            # Checks and handles if the file already exists in the destination directory.
             if os.path.exists(destination_path):
-                log_action(f"Warning: File '{file}' already exists in '{date_directory}'. Skipping backup.")
-                print(f"Warning: File '{file}' already exists in '{date_directory}'. Skipping backup.")
+                log_message(f"File '{file}' already exists in '{date_directory.replace(os.sep, '/')}'. Skipping move. {'Backup not created.' if backup_wanted else ''}", level="warning")
                 continue
-            shutil.copy2(os.path.join(directory, file), os.path.join(backup_directory, file))  # Backup the file
-            log_action(f"Backed up file: {file}")
 
-    total_files = sum(len(files) for files in files_by_date.values())
-    log_action(f"Found {total_files} files")
-    print(f"Found {total_files} files")
-    print("Files sorted and separated by date:")
-    
-    for date, files in files_by_date.items():
-        print(date)
-        date_directory = os.path.join(directory, date)
-        os.makedirs(date_directory, exist_ok=True)
+            # Backups the file if backup is wanted and overwrites the previous backup file if it already exists.
+            if backup_wanted:
+                shutil.copy2(source_path, os.path.join(backup_directory, file))
 
-        for file in files:
-            destination_path = os.path.join(date_directory, file)
-            if os.path.exists(destination_path):
-                log_action(f"Warning: File '{file}' already exists in '{date_directory}'. Skipping move.")
-                print(f"Warning: File '{file}' already exists in '{date_directory}'. Skipping move.")
-                continue
-            log_action(f"Moving file '{file}' to '{date_directory}'")
-            print(f"  {file}")
-            shutil.move(os.path.join(directory, file), destination_path)
-        print()
+            # Moves the file to the date directory.
+            log_message(f"Moving file '{file}' to '{date_directory.replace(os.sep, '/')}'", level="moving")
+            shutil.move(source_path, destination_path)
+            total_files_moved += 1
 
-files_by_date = sort_files_by_date(directory)
-move_files(files_by_date, directory)
+    log_message(f"TOTAL FILES MOVED: {total_files_moved}\n", level="decorating")
+    return total_files_found, total_files_moved
+
+def main():
+    log_message("**************************************************\n", level="decorating")
+    log_message(f"New Log - {datetime.now()}\n", level="decorating")
+    log_message("**************************************************\n", level="decorating")
+
+    log_message("Settings:\n", level="decorating")
+    log_message(f"  - Target Directory: {directory}\n", level="decorating")
+    log_message(f"  - Backup: {'enabled' if backup_wanted else 'disabled'}\n", level="decorating")
+    log_message(f"  - File Types To Include: \n", level="decorating")
+    log_message(f"  - File Types To Exclude: \n", level="decorating")
+
+    log_message("--------------------------------------------------\n", level="decorating")
+
+    log_message("\n", level="decorating")
+
+    grouped_files = sort_files_by_date(directory)
+    total_files_found, total_files_moved = move_files(grouped_files, directory)
+
+    if total_files_found != total_files_moved:
+        log_message("Some files were not moved.", level="warning")
+
+    log_message("\n==================================================\n", level="decorating")
+
+    log_message("\n\n\n\n", level="decorating")
+
+if __name__ == "__main__":
+    main()
