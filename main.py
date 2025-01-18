@@ -4,12 +4,17 @@ Directories are skipped
 """
 
 #  still need to do:
-# - update top comment
+# - update top comment/documentation
 # - handle error if log file is not created (??? tbd)
 # - handle error if directory does not exist
 # - handle error if no files are found (??? tbd)
 # - refactor log message area (looks messy)
 # - refactor "{'Backup not created.' if backup_wanted else ''}" (looks messy and repetitive)
+# - config file for settings???
+# - unit tests
+# - read me file
+# - modularize code??? tbd
+
 
 
 # Imports
