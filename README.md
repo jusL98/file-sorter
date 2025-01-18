@@ -1,5 +1,5 @@
 <p align="center">
-   <img width="500" alt="image" src=""/>
+   <img width="600" alt="image" src="https://github.com/user-attachments/assets/bca85f09-f24d-4657-92fd-23e8d755b051"/>
 </p>
 
 # File Sorter By Date (FSBD)
@@ -62,3 +62,8 @@ To install the File Sorter By Date, follow these steps:
 ---
 
 Thank you!
+
+<p align="center">
+   <img width="1000" alt="image" src="https://github.com/user-attachments/assets/1bf0f0f6-f66b-4bd1-9f1c-d392aa2adaaa"/>
+
+</p>
