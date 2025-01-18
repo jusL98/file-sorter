@@ -2,6 +2,16 @@
 This program will sort files in a directory by their creation date and separate them by date.
 Directories are skipped
 """
+
+#  still need to do:
+# - update top comment
+# - handle error if log file is not created (??? tbd)
+# - handle error if directory does not exist
+# - handle error if no files are found (??? tbd)
+# - refactor log message area (looks messy)
+# - refactor "{'Backup not created.' if backup_wanted else ''}" (looks messy and repetitive)
+
+
 # Imports
 import os
 from datetime import datetime
@@ -18,11 +28,11 @@ file_types_to_exclude = [".mp4", ".exe"]  # Add file extensions to exclude (ex. 
 # Handles logging and printing messages.
 def log_message(message, level="info"):
     levels = {
-        "decorating": "",
         "info": "",
-        "moving": "",
-        "warning": "Warning: ",
-        "error": "Error: "
+        "moving": "MOVING: ",
+        "warning": "WARNING: ",
+        "error": "ERROR: ",
+        "decorating": ""
     }
     prefix = levels.get(level, "")
     full_message = f"{prefix}{message}"
@@ -30,9 +40,12 @@ def log_message(message, level="info"):
     if level == "info":
         with open(log_file, "a") as log:
             log.write(f"{datetime.now()}: {full_message}\n")
-    if level == "moving" or level == "warning" or level == "error":
+    elif level == "moving" or level == "warning":
         with open(log_file, "a") as log:
             log.write(f"{datetime.now()}:  --> {full_message}\n")
+    elif level == "error":
+        with open(log_file, "a") as log:
+            log.write(f"{datetime.now()}: {full_message}\n")
     elif level == "decorating":
         with open(log_file, "a") as log:
             log.write(full_message)
@@ -76,7 +89,7 @@ def move_files(grouped_files, directory):
 
     # Checks if there are no files to move.
     if not total_files_found:
-        log_message("No files to move. Exiting.")
+        log_message("No files to move. Exiting.", level="error")
         log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
         return total_files_found, total_files_moved
 
@@ -117,7 +130,7 @@ def move_files(grouped_files, directory):
                 shutil.copy2(source_path, os.path.join(backup_directory, file))
 
             # Moves the file to the date directory.
-            log_message(f"Moving file '{file}' to '{date_directory.replace(os.sep, '/')}'. {'Backup created.' if backup_wanted else ''}", level="moving")
+            log_message(f"File '{file}' to '{date_directory.replace(os.sep, '/')}'. {'Backup created.' if backup_wanted else ''}", level="moving")
             shutil.move(source_path, destination_path)
             total_files_moved += 1
 
@@ -131,7 +144,7 @@ def main():
 
     log_message("Settings:\n", level="decorating")
     log_message(f"  - Target Directory: {directory}\n", level="decorating")
-    log_message(f"  - Backup: {'enabled' if backup_wanted else 'disabled'}\n", level="decorating")
+    log_message(f"  - Backup: {'Enabled' if backup_wanted else 'Disabled'}\n", level="decorating")
     log_message(f"  - File Types To Include: {', '.join(file_types_to_include) if file_types_to_include else 'All'}\n", level="decorating")
     log_message(f"  - File Types To Exclude: {', '.join(file_types_to_exclude) if file_types_to_exclude else 'None'}\n", level="decorating")
 
