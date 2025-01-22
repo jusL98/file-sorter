@@ -11,6 +11,8 @@ Settings can be modified including:
 - File types to exclude
 """
 
+# test commit
+
 # Imports
 import os
 import json
