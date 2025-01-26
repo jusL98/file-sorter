@@ -11,6 +11,8 @@ Settings can be modified including:
 - File types to exclude
 """
 
+#test
+
 # Imports
 import os
 import json
