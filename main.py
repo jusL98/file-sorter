@@ -13,30 +13,140 @@ Settings can be modified including:
 
 # Imports
 import os
-import json
-from datetime import datetime
 import shutil
+from datetime import datetime
+from PyQt5 import QtWidgets
 
-# Load settings from config.json.
-def load_config():
-    with open('config.json', 'r') as config_file:
-        return json.load(config_file)
+ERROR_MESSAGES = {
+    "loading_config": "Failed to load configuration: {}",
+    "source_not_exist": "Source directory does not exist.",
+    "target_not_exist": "Target directory does not exist.",
+    "no_files_to_move": "No files to move.",
+    "logging_error": "Failed to write to log file: {}"
+}
 
-config = load_config()
+class FileSorterApp(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
 
-source_directory = config['source_directory']
-target_directory = config['target_directory']
-backup_wanted = config['backup_wanted']
-file_types_to_include = config['file_types_to_include']
-file_types_to_exclude = config['file_types_to_exclude']
+    def init_ui(self):
+        self.setWindowTitle("File Sorter By Date")
+        self.setGeometry(100, 100, 600, 300)
+
+        # Layout
+        layout = QtWidgets.QVBoxLayout()
 
 
-log_file = os.path.join(target_directory, "log.txt")
-backup_directory = os.path.join(target_directory, "_BACKUP_")
-# --------------------------------------------
+        # Source Directory
+        self.source_label = QtWidgets.QLabel("Source Directory:")
+        self.source_entry = QtWidgets.QLineEdit()
+        self.source_button = QtWidgets.QPushButton("Browse")
+        self.source_button.clicked.connect(self.browse_source)
+        layout.addWidget(self.source_label)
+        layout.addWidget(self.source_entry)
+        layout.addWidget(self.source_button)
 
+        # Target Directory
+        self.target_label = QtWidgets.QLabel("Target Directory:")
+        self.target_entry = QtWidgets.QLineEdit()
+        self.target_button = QtWidgets.QPushButton("Browse")
+        self.target_button.clicked.connect(self.browse_target)
+        layout.addWidget(self.target_label)
+        layout.addWidget(self.target_entry)
+        layout.addWidget(self.target_button)
+
+        # Backup Option
+        self.backup_var = QtWidgets.QCheckBox("Enable Backup")
+        layout.addWidget(self.backup_var)
+
+        # File Types to Include
+        self.include_label = QtWidgets.QLabel("File Types to Include (comma-separated):")
+        self.include_entry = QtWidgets.QLineEdit()
+        layout.addWidget(self.include_label)
+        layout.addWidget(self.include_entry)
+
+        # File Types to Exclude
+        self.exclude_label = QtWidgets.QLabel("File Types to Exclude (comma-separated):")
+        self.exclude_entry = QtWidgets.QLineEdit()
+        layout.addWidget(self.exclude_label)
+        layout.addWidget(self.exclude_entry)
+
+        # Start Sorting Button
+        self.start_button = QtWidgets.QPushButton("Start Sorting")
+        self.start_button.clicked.connect(self.start_sorting)
+        layout.addWidget(self.start_button)
+
+
+        # Set Layout
+        self.setLayout(layout)
+
+    def browse_source(self):
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Source Directory")
+        if directory:
+            self.source_entry.setText(directory)
+
+    def browse_target(self):
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Target Directory")
+        if directory:
+            self.target_entry.setText(directory)
+
+    def validate(self):
+        self.source_directory = self.source_entry.text()
+        self.target_directory = self.target_entry.text()
+        self.backup_wanted = self.backup_var.isChecked()
+
+        # Update log file and backup directory paths.
+        self.log_file = os.path.join(self.target_directory, "log.txt")
+        self.backup_directory = os.path.join(self.target_directory, "_BACKUP_")
+
+        # Get file types to include and exclude from the entries.
+        self.file_types_to_include = [ext.strip() for ext in self.include_entry.text().split(',') if ext.strip()]
+        self.file_types_to_exclude = [ext.strip() for ext in self.exclude_entry.text().split(',') if ext.strip()]
+
+        # Validate source and target directories.
+        if not os.path.exists(self.source_directory) or not os.path.exists(self.target_directory):
+            if not os.path.exists(self.source_directory):
+                QtWidgets.QMessageBox.critical(self, "Error", ERROR_MESSAGES["source_not_exist"])
+                print('ERROR: Source directory does not exist.')
+            if not os.path.exists(self.target_directory):
+                QtWidgets.QMessageBox.critical(self, "Error", ERROR_MESSAGES["target_not_exist"])
+                print('ERROR: Target directory does not exist.')
+            return False
+        return True
+
+    def start_sorting(self):
+        if not self.validate():
+            print('x')
+        else:
+            log_message("**************************************************\n", level="decorating")
+            log_message(f"New Log Entry - {datetime.now()}\n", level="decorating")
+            log_message("**************************************************\n", level="decorating")
+
+            log_message("Settings:\n", level="decorating")
+            log_message(f"  - Source Directory: {self.source_directory}\n", level="decorating")
+            log_message(f"  - Target Directory: {self.target_directory}\n", level="decorating")
+            log_message(f"  - Backup: {'Enabled' if self.backup_wanted else 'Disabled'}\n", level="decorating")
+            log_message(f"  - File Types To Include: {', '.join(self.file_types_to_include) if self.file_types_to_include else 'All'}\n", level="decorating")
+            log_message(f"  - File Types To Exclude: {', '.join(self.file_types_to_exclude) if self.file_types_to_exclude else 'None'}\n", level="decorating")
+
+
+        """# Sort and move files
+        grouped_files = sort_files_by_date(self.source_directory, self.log_file)
+        total_files_found, total_files_moved = move_files(
+            grouped_files, self.source_directory, self.target_directory,
+            self.backup_wanted, self.backup_directory,
+            self.file_types_to_include, self.file_types_to_exclude,
+            self.log_file
+        )
+
+        # Only show completion message if files were moved
+        if total_files_moved > 0:
+            QtWidgets.QMessageBox.information(self, "Completed", f"Total Files Moved: {total_files_moved} of {total_files_found}")
+"""
+    
 # Handles logging and printing messages.
-def log_message(message, level="info"):
+def log_message(message, level="info", log_file=None, backup_wanted=False):
     levels = {
         "info": "",
         "moving": "MOVING: ",
@@ -62,19 +172,18 @@ def log_message(message, level="info"):
         log.write(final_message)
 
 # Gets the sort method for each file either based on the file name of YYYYMMDD (first 8 digits), otherwise if not named like that, based on creation date.
-def get_sort_key(file):
-    file_path = os.path.join(source_directory, file) 
+def get_sort_key(file, source_directory):
+    file_path = os.path.join(source_directory, file)
 
     # Sorts by file name
     if len(file) >= 8 and file[:8].isdigit():
         return datetime.strptime(file[:8], "%Y%m%d")
     
     # Sorts by creation date
-    else:
-        return datetime.fromtimestamp(os.path.getmtime(file_path))
+    return datetime.fromtimestamp(os.path.getmtime(file_path))
 
 # Sorts and orders files and stores it in a dictionary. If the file is a directory or the log file, it will skip it.
-def sort_files_by_date(source_directory):
+def sort_files_by_date(source_directory, log_file):
     files = os.listdir(source_directory)
     sorted_files = sorted(files, key=get_sort_key)
     grouped_files = {}
@@ -91,7 +200,7 @@ def sort_files_by_date(source_directory):
     return grouped_files
 
 # Moves files to their respective date folders and creates a backup of the files before moving them.
-def move_files(grouped_files, source_directory):
+def move_files(grouped_files, source_directory, target_directory, backup_wanted, backup_directory, file_types_to_include, file_types_to_exclude, log_file):
     total_files_found = sum(len(files) for files in grouped_files.values())
     total_files_moved = 0
 
@@ -156,38 +265,13 @@ def move_files(grouped_files, source_directory):
     print(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}")
     return total_files_found, total_files_moved
 
+# Main function
 def main():
-    # Ensure the source directory exists
-    if not os.path.exists(source_directory):
-        print('ERROR: Source directory does not exist.')
-        return
-
-    # Ensure the target directory exists
-    if not os.path.exists(target_directory):
-        print('ERROR: Target directory does not exist.')
-        return
-
-    log_message("**************************************************\n", level="decorating")
-    log_message(f"New Log Entry - {datetime.now()}\n", level="decorating")
-    log_message("**************************************************\n", level="decorating")
-
-    log_message("Settings:\n", level="decorating")
-    log_message(f"  - Source Directory: {source_directory}\n", level="decorating")
-    log_message(f"  - Target Directory: {target_directory}\n", level="decorating")
-    log_message(f"  - Backup: {'Enabled' if backup_wanted else 'Disabled'}\n", level="decorating")
-    log_message(f"  - File Types To Include: {', '.join(file_types_to_include) if file_types_to_include else 'All'}\n", level="decorating")
-    log_message(f"  - File Types To Exclude: {', '.join(file_types_to_exclude) if file_types_to_exclude else 'None'}\n", level="decorating")
-
-    log_message("--------------------------------------------------\n", level="decorating")
-
-    log_message("\n", level="decorating")
-
-    grouped_files = sort_files_by_date(source_directory)
-    move_files(grouped_files, source_directory)
-
-    log_message("\n==================================================\n", level="decorating")
-
-    log_message("\n\n\n\n", level="decorating")
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    window = FileSorterApp()
+    window.show()
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()
