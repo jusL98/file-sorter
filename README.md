@@ -108,7 +108,7 @@ To install File Sorter, follow these steps:
 ## Project Structure
 
 ```
-├── file-uploader/
+├── file-sorter/
 │   ├── main.py                        # contains the main program code and logic
 │   └── config.json                    # contains configuration settings
 ```
