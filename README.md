@@ -54,15 +54,15 @@ To install File Sorter, follow these steps:
 
    - On Windows:
 
-   ```bash
-   notepad config.json
-   ```
+      ```bash
+      notepad config.json
+      ```
 
    - On macOS or Linux
 
-   ```bash
-   open config.json
-   ```
+      ```bash
+      open config.json
+      ```
 
 7. Edit the configuration settings to satisfy your needs:
 
