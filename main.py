@@ -166,7 +166,7 @@ def main():
     if not os.path.exists(target_directory):
         print('ERROR: Target directory does not exist.')
         return
-
+    
     log_message("**************************************************\n", level="decorating")
     log_message(f"New Log Entry - {datetime.now()}\n", level="decorating")
     log_message("**************************************************\n", level="decorating")
