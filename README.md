@@ -2,7 +2,7 @@
 
 # File Sorter
 
-This is a tool to automate organizing files into folders by date. The program first sorts files by the naming format YYYYMMDD, standard of smartphone camera file naming, otherwise by creation date if the file name does not follow that format. The tool enables the user to specify the source and target directories, whether to backup files, and the file types to include and exclude in the config.json file. Extensive logging and error handling is implemented.
+This program is a tool to automate organizing files into folders by date. The program first sorts files by the naming format YYYYMMDD, standard of smartphone camera file naming, otherwise by creation date if the file name does not follow that format. The tool enables the user to specify the source and target directories, whether to backup files, and the file types to include and exclude in the config.json file. Extensive logging and error handling is implemented.
 
 <p align="left">
    <img width="600" alt="image" src="https://github.com/user-attachments/assets/bca85f09-f24d-4657-92fd-23e8d755b051"/>
